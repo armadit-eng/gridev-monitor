@@ -16,7 +16,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '18'
         
     - name: Install Cordova
       run: npm install -g cordova
@@ -25,20 +25,30 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '11'
         
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
+    - name: Create dummy icons
+      run: |
+        mkdir -p res/icon/android
+        echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" | base64 -d > res/icon/android/hdpi.png
+        cp res/icon/android/hdpi.png res/icon/android/mdpi.png
+        cp res/icon/android/hdpi.png res/icon/android/xhdpi.png
+        cp res/icon/android/hdpi.png res/icon/android/xxhdpi.png
+        cp res/icon/android/hdpi.png res/icon/android/xxxhdpi.png
+        cp res/icon/android/hdpi.png res/icon/android/icon.png
+        
     - name: Install Bluetooth Plugin
       run: |
         cordova plugin add cordova-plugin-bluetooth-serial
         
-    - name: Add Android Platform
-      run: cordova platform add android@13
+    - name: Add Android Platform (version 12 for stability)
+      run: cordova platform add android@12
       
     - name: Build Debug APK
-      run: cordova build android --debug
+      run: cordova build android --debug --verbose
       
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
