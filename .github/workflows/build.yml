@@ -33,11 +33,12 @@ jobs:
     - name: Add Android Platform
       run: cordova platform add android@13
       
-    - name: Build APK
-      run: cordova build android --release
+    - name: Build Debug APK
+      run: cordova build android --debug
       
-    - name: Upload APK
+    - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release
-        path: platforms/android/app/build/outputs/apk/release/
+        name: Grid-EV-Monitor
+        path: platforms/android/app/build/outputs/apk/debug/
+        if-no-files-found: error
