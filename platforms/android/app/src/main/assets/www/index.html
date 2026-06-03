@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GRID EV Monitor - Working Energy</title>
+<style>
+:root {
+  --bg:#060910;--bg2:#0a0f1a;--bg3:#0d1525;
+  --panel:#0e1628;--panel2:#111e35;
+  --border:#1a3356;--border2:#0f2040;
+  --accent:#00cfff;--accent2:#00ffaa;--accent3:#ff6b35;
+  --warn:#ffcc00;--danger:#ff2d55;
+  --text:#ddeeff;--text2:#6a9cc0;--text3:#2a4a6a;
+  --glow:0 0 24px rgba(0,207,255,0.35);
+  --glow2:0 0 24px rgba(0,255,170,0.35);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;}
+body::after{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px);pointer-events:none;z-index:9999;}
+
+.header{
+  background:linear-gradient(180deg,#050810 0%,#080d18 100%);
+  border-bottom:1px solid var(--border);
+  padding:10px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{
+  width:38px;height:38px;
+  background:linear-gradient(135deg,#0099cc,#006699);
+  border-radius:10px;border:1px solid rgba(0,207,255,0.3);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',monospace;font-size:9px;font-weight:900;color:#fff;
+  box-shadow:var(--glow);
+}
+.logo-text{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:var(--accent);letter-spacing:3px;text-shadow:var(--glow);}
+.logo-sub{font-size:9px;color:var(--text3);letter-spacing:3px;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.clock{font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--accent2);text-shadow:var(--glow2);letter-spacing:3px;}
+.bt-btn{
+  display:flex;align-items:center;gap:6px;
+  background:linear-gradient(135deg,#0e1e30,#091525);
+  border:1px solid var(--border);color:var(--text2);
+  padding:7px 13px;border-radius:8px;cursor:pointer;
+  font-size:13px;font-weight:600;
+  transition:all 0.3s;
+}
+.bt-btn:hover{border-color:var(--accent);color:var(--accent);}
+.bt-btn.connected{border-color:var(--accent2);color:var(--accent2);box-shadow:0 0 12px rgba(0,255,170,0.2);}
+.bt-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:all 0.3s;}
+.bt-btn.connected .bt-dot{background:var(--accent2);box-shadow:0 0 8px var(--accent2);animation:blink 2s infinite;}
+
+.main{padding:14px;display:flex;flex-direction:column;gap:14px;max-width:500px;margin:0 auto;padding-bottom:70px;}
+
+.hero{
+  background:linear-gradient(160deg,#08101e 0%,#0c1a2e 50%,#080e1a 100%);
+  border:1px solid var(--border);border-radius:20px;
+  padding:20px 16px 16px;
+  position:relative;
+}
+.hero-grid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;}
+.soc-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.soc-svg{width:130px;height:80px;}
+.arc-bg{fill:none;stroke:#0f2040;stroke-width:10;stroke-linecap:round;}
+.arc-fill{fill:none;stroke:url(#arcGrad);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1.2s;}
+.soc-num{font-family:'Orbitron',monospace;font-size:34px;font-weight:900;fill:var(--accent);text-anchor:middle;}
+.soc-lbl{font-size:11px;fill:var(--text3);text-anchor:middle;letter-spacing:2px;}
+
+.speed-ring{
+  width:100px;height:100px;border-radius:50%;
+  background:linear-gradient(145deg,#0a1525,#050b15);
+  border:2px solid rgba(0,207,255,0.15);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;
+}
+.speed-ring::before{
+  content:'';position:absolute;inset:-1px;border-radius:50%;
+  background:conic-gradient(var(--accent) var(--spd-pct,0%), transparent 0%);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#fff calc(100% - 3px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#fff calc(100% - 3px));
+  opacity:0.6;
+}
+.speed-num{font-family:'Orbitron',monospace;font-size:36px;font-weight:900;color:var(--accent);text-shadow:0 0 20px rgba(0,207,255,0.7);line-height:1;}
+.speed-kmh{font-size:11px;color:var(--text3);}
+.speed-label{font-size:10px;color:var(--text3);letter-spacing:2px;}
+
+.soh-ring{
+  width:70px;height:70px;border-radius:50%;
+  background:linear-gradient(145deg,#0a1525,#050b15);
+  border:1px solid rgba(255,204,0,0.2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;
+}
+.soh-ring::before{
+  content:'';position:absolute;inset:-1px;border-radius:50%;
+  background:conic-gradient(var(--warn) var(--soh-pct,0%), transparent 0%);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#fff calc(100% - 3px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#fff calc(100% - 3px));
+  opacity:0.7;
+}
+.soh-num{font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--warn);line-height:1;}
+.soh-pct{font-size:10px;color:var(--text3);}
+.soh-lbl{font-size:10px;color:var(--text3);text-align:center;}
+
+.hero-bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.hero-stat{background:rgba(0,207,255,0.04);border:1px solid rgba(0,207,255,0.08);border-radius:10px;padding:10px 12px;}
+.hero-stat.green{background:rgba(0,255,170,0.04);border-color:rgba(0,255,170,0.1);}
+.hero-stat-label{font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;}
+.hero-stat-val{font-family:'Share Tech Mono',monospace;font-size:22px;line-height:1.1;}
+.hero-stat-val.cyan{color:var(--accent);}
+.hero-stat-val.green{color:var(--accent2);}
+.hero-stat-unit{font-size:10px;color:var(--text3);}
+
+.mode-card{
+  background:linear-gradient(135deg,#090f1c,#0c1525);
+  border:1px solid var(--border);border-radius:14px;padding:14px;
+}
+.mode-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.mode-title{font-family:'Orbitron',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;}
+.mode-switch{display:flex;gap:6px;background:#060c18;border-radius:30px;padding:3px;}
+.mode-opt{
+  padding:5px 12px;border-radius:30px;font-size:10px;font-weight:600;cursor:pointer;
+  color:var(--text3);transition:all 0.2s;
+}
+.mode-opt.active{background:var(--accent2);color:#000;box-shadow:0 0 8px var(--accent2);}
+
+.canvas-container{
+  background:#030508;
+  border:2px solid var(--border);
+  border-radius:8px;
+  padding:0;
+  overflow:hidden;
+  width:100%;
+}
+canvas{
+  width:100%;
+  height:auto;
+  display:block;
+  background:#030508;
+}
+
+.display-status{display:flex;justify-content:space-between;margin-top:8px;}
+.display-status .counter{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);}
+
+.preview-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px solid var(--border2);
+}
+.preview-card{
+  background:rgba(0,0,0,0.4);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:6px 4px;
+  text-align:center;
+}
+.preview-label{
+  font-size:8px;
+  font-weight:bold;
+  color:var(--accent);
+  letter-spacing:0.5px;
+}
+.preview-value{
+  font-family:'Share Tech Mono',monospace;
+  font-size:16px;
+  font-weight:bold;
+  color:var(--accent2);
+}
+.preview-unit{font-size:7px;color:var(--text3);margin-left:1px;}
+
+#quotesPanel .nav-pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px;}
+#quotesPanel .nav-pill{
+  flex:1;min-width:55px;
+  background:#060c18;border:1px solid var(--border2);
+  border-radius:6px;padding:5px 6px;
+  font-size:10px;font-weight:bold;
+  color:var(--text3);text-align:center;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+#quotesPanel .nav-pill.active{border-color:var(--accent2);color:var(--accent2);background:rgba(0,255,170,0.15);}
+.custom-row{display:flex;gap:8px;margin-top:12px;}
+.custom-row .set-inp{flex:1;}
+
+.section-hd{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.section-hd::before,.section-hd::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent);}
+.section-hd::before{background:linear-gradient(90deg,transparent,var(--border));}
+.section-hd span{font-family:'Orbitron',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;}
+
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mcard{
+  background:var(--panel);border:1px solid var(--border2);
+  border-radius:12px;padding:12px 14px;
+}
+.mcard-label{font-size:10px;font-weight:bold;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;}
+.mcard-val{font-family:'Share Tech Mono',monospace;font-size:28px;font-weight:bold;line-height:1;}
+.mcard-val.c{color:var(--accent);}
+.mcard-val.g{color:var(--accent2);}
+.mcard-val.o{color:var(--accent3);}
+.mcard-val.w{color:var(--warn);}
+.mcard-val.d{color:var(--danger);}
+.mcard-unit{font-size:10px;color:var(--text3);}
+
+.trip-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;}
+.trip-card{background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:12px;text-align:center;}
+.trip-label{font-size:10px;font-weight:bold;color:var(--text3);text-transform:uppercase;}
+.trip-val{font-family:'Share Tech Mono',monospace;font-size:26px;font-weight:bold;color:var(--accent2);}
+.trip-unit{font-size:10px;color:var(--text3);}
+
+.set-card{background:var(--panel);border:1px solid var(--border2);border-radius:14px;padding:14px;}
+.set-row{display:flex;gap:8px;align-items:flex-end;margin-top:8px;}
+.set-lbl{font-size:10px;font-weight:bold;color:var(--text3);margin-bottom:5px;text-transform:uppercase;}
+.set-inp{width:100%;background:#060b14;border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:15px;outline:none;}
+.set-inp:focus{border-color:var(--accent);}
+.set-btn{
+  background:linear-gradient(135deg,#0d2840,#07192c);
+  border:1px solid var(--accent);color:var(--accent);
+  padding:9px 14px;border-radius:8px;cursor:pointer;
+  font-size:13px;font-weight:700;
+}
+.set-btn:hover{background:var(--accent);color:#000;box-shadow:var(--glow);}
+
+.mon-card{background:var(--panel);border:1px solid var(--border2);border-radius:14px;padding:14px;}
+.mon-header{display:flex;justify-content:space-between;margin-bottom:10px;}
+.mon-title{font-size:9px;font-weight:bold;color:var(--text3);letter-spacing:2px;}
+.mon-clear{font-size:11px;background:#060c18;border:1px solid var(--border);color:var(--text3);padding:4px 10px;border-radius:6px;cursor:pointer;}
+.mon-clear:hover{border-color:var(--danger);color:var(--danger);}
+.mon-screen{background:#030508;border:1px solid #080f1e;border-radius:8px;padding:10px;height:130px;overflow-y:auto;font-family:'Share Tech Mono',monospace;font-size:12px;line-height:1.9;}
+
+.statusbar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:linear-gradient(180deg,rgba(6,9,16,0.95),#060910);
+  border-top:1px solid var(--border2);
+  padding:10px 16px;display:flex;justify-content:space-between;
+  backdrop-filter:blur(10px);
+}
+.st-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px;background:var(--text3);}
+.st-dot.ok{background:var(--accent2);box-shadow:0 0 6px var(--accent2);animation:blink 2s infinite;}
+.st-dot.err{background:var(--danger);}
+.st-text{font-size:12px;font-weight:bold;color:var(--text3);}
+.st-time{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3);}
+
+.toast{position:fixed;bottom:56px;left:50%;transform:translateX(-50%) translateY(10px);background:#0d1a2e;border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;opacity:0;transition:all 0.3s;z-index:999;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:var(--accent2);color:var(--accent2);}
+.toast.err{border-color:var(--danger);color:var(--danger);}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);backdrop-filter:blur(6px);z-index:200;align-items:center;justify-content:center;}
+.overlay.show{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:18px;width:100%;max-width:380px;overflow:hidden;}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--border2);display:flex;justify-content:space-between;}
+.modal-title{font-family:'Orbitron',monospace;font-size:12px;color:var(--accent);}
+.modal-x{width:28px;height:28px;background:#0d1a2e;border:none;border-radius:6px;color:var(--text2);cursor:pointer;}
+.modal-body{padding:20px;display:flex;flex-direction:column;gap:10px;}
+.modal-info{background:rgba(0,207,255,0.05);border-radius:8px;padding:12px;font-size:12px;}
+.conn-btn{width:100%;background:linear-gradient(135deg,#0d2840,#07192c);border:1px solid var(--accent);color:var(--accent);padding:14px;border-radius:10px;cursor:pointer;font-weight:700;}
+.conn-btn:hover{background:var(--accent);color:#000;}
+.demo-btn{width:100%;background:transparent;border:1px solid var(--text3);color:var(--text3);padding:10px;border-radius:10px;cursor:pointer;}
+.disc-btn{width:100%;background:rgba(255,45,85,0.08);border:1px solid var(--danger);color:var(--danger);padding:10px;border-radius:10px;cursor:pointer;}
+.spin{animation:spin 1s linear infinite;display:inline-block;}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">GRID</div>
+    <div><div class="logo-text">EV MONITOR</div><div class="logo-sub">REAL ENERGY</div></div>
+  </div>
+  <div class="header-right">
+    <div class="clock" id="clock">--:--</div>
+    <button class="bt-btn" id="btBtn" onclick="openModal()">
+      <div class="bt-dot" id="btDot"></div>
+      <span id="btLbl">Serial</span>
+    </button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="hero">
+    <div class="hero-grid">
+      <div class="soc-wrap">
+        <svg class="soc-svg" viewBox="0 0 130 80">
+          <defs><linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#ff2d55"/><stop offset="45%" stop-color="#ffcc00"/><stop offset="100%" stop-color="#00ffaa"/></linearGradient></defs>
+          <path class="arc-bg" d="M 14 72 A 54 54 0 0 1 116 72" stroke-dasharray="170" stroke-dashoffset="0"/>
+          <path class="arc-fill" id="arcFill" d="M 14 72 A 54 54 0 0 1 116 72" stroke-dasharray="170" stroke-dashoffset="170"/>
+          <text class="soc-num" x="65" y="66" id="socNum">--</text>
+          <text class="soc-lbl" x="65" y="78">SOC %</text>
+        </svg>
+      </div>
+      <div class="speed-center">
+        <div class="speed-ring" id="speedRing"><div class="speed-num" id="spdNum">--</div><div class="speed-kmh">km/h</div></div>
+        <div class="speed-label">SPEED</div>
+      </div>
+      <div class="soh-wrap">
+        <div class="soh-ring" id="sohRing"><div class="soh-num" id="sohNum">--</div><div class="soh-pct">%</div></div>
+        <div class="soh-lbl">SOH</div>
+      </div>
+    </div>
+    <div class="hero-bottom">
+      <div class="hero-stat"><div class="hero-stat-label">VOLTAGE</div><div class="hero-stat-val cyan" id="vbatNum">--</div><div class="hero-stat-unit">Volt</div></div>
+      <div class="hero-stat green"><div class="hero-stat-label">POWER</div><div class="hero-stat-val green" id="powerNum">--</div><div class="hero-stat-unit">Watt</div></div>
+    </div>
+  </div>
+
+  <div class="mode-card">
+    <div class="mode-header">
+      <div class="mode-title">AT+MAPs= DISPLAY MODE</div>
+      <div class="mode-switch" id="modeSwitch">
+        <div class="mode-opt active" data-mode="trip">🔋 PERJALANAN</div>
+        <div class="mode-opt" data-mode="battery">⚡ BATERAI</div>
+        <div class="mode-opt" data-mode="quotes">📝 QUOTES</div>
+      </div>
+    </div>
+    
+    <div class="canvas-container">
+      <canvas id="displayCanvas" width="300" height="150" style="width:100%;height:auto;background:#030508;"></canvas>
+    </div>
+    <div class="display-status">
+      <div class="counter" id="displayInfo">PERJALANAN & ENERGI</div>
+      <div class="counter" id="displaySize">0/6900 chr</div>
+    </div>
+
+    <div class="preview-grid" id="previewGrid"></div>
+
+    <div id="quotesPanel" style="display:none;">
+      <div class="nav-pills" id="quotesPills"></div>
+      <div class="custom-row">
+        <input class="set-inp" type="text" id="quoteInput" placeholder="Tambah quote custom..." maxlength="80">
+        <button class="set-btn" onclick="addCustomQuote()">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-hd"><span>DETAIL BATERAI</span></div>
+  <div class="metrics-grid">
+    <div class="mcard"><div class="mcard-label">CURRENT</div><div class="mcard-val c" id="ibatVal">--</div><div class="mcard-unit">A</div></div>
+    <div class="mcard"><div class="mcard-label">ENERGI TERPAKAI</div><div class="mcard-val g" id="energiVal">--</div><div class="mcard-unit">Wh</div></div>
+    <div class="mcard"><div class="mcard-label">TEMP BATERAI</div><div class="mcard-val o" id="tbatVal">--</div><div class="mcard-unit">°C</div></div>
+    <div class="mcard"><div class="mcard-label">CYCLE</div><div class="mcard-val w" id="cbatVal">--</div><div class="mcard-unit">x</div></div>
+    <div class="mcard"><div class="mcard-label">TEMP INVERTER</div><div class="mcard-val d" id="tinvVal">--</div><div class="mcard-unit">°C</div></div>
+    <div class="mcard"><div class="mcard-label">SISA ENERGI</div><div class="mcard-val c" id="sisaEnergiVal">--</div><div class="mcard-unit">Wh</div></div>
+  </div>
+
+  <div class="section-hd"><span>PERJALANAN</span></div>
+  <div class="trip-row">
+    <div class="trip-card"><div class="trip-label">TRIP (ODO)</div><div class="trip-val" id="tripVal">--</div><div class="trip-unit">km</div></div>
+    <div class="trip-card"><div class="trip-label">EFISIENSI (RATA2)</div><div class="trip-val" id="efisVal">--</div><div class="trip-unit">Wh/km</div></div>
+  </div>
+  <div class="trip-row">
+    <div class="trip-card"><div class="trip-label">SISA ENERGI</div><div class="trip-val" id="sisaEnergiVal2">--</div><div class="trip-unit">Wh</div></div>
+    <div class="trip-card"><div class="trip-label">⟹ SISA JARAK ⟹</div><div class="trip-val" id="sisaJarakVal">--</div><div class="trip-unit">km</div></div>
+  </div>
+
+  <div class="section-hd"><span>PENGATURAN</span></div>
+  <div class="set-card">
+    <div><div class="set-lbl">BAUD RATE</div><select class="set-inp" id="baudSel"><option value="9600">9600</option><option value="38400">38400</option><option value="57600">57600</option><option value="115200">115200</option></select></div>
+    <div><div class="set-lbl">KAPASITAS BATERAI (Ah)</div><div class="set-row"><div style="flex:1"><input class="set-inp" type="number" id="capInp" value="20" min="1"></div><button class="set-btn" onclick="setCap()">SET</button></div></div>
+    <div><div class="set-lbl">INTERVAL POLLING (ms)</div><div class="set-row"><div style="flex:1"><input class="set-inp" type="number" id="pollInp" value="200" min="100"></div><button class="set-btn" onclick="setPoll()">SET</button></div></div>
+  </div>
+
+  <div class="section-hd"><span>SERIAL MONITOR</span></div>
+  <div class="mon-card">
+    <div class="mon-header"><div class="mon-title">RAW DATA</div><button class="mon-clear" onclick="clearMon()">CLEAR</button></div>
+    <div class="mon-screen" id="monScreen"></div>
+    <div class="set-row"><div style="flex:1"><input class="set-inp" type="text" id="manInp" placeholder="AT+SOC?"></div><button class="set-btn" onclick="sendManual()">KIRIM</button></div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <div><span class="st-dot" id="stDot"></span><span class="st-text" id="stTxt">Tidak terhubung</span></div>
+  <div class="st-time" id="stTime">--:--:--</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">KONEKSI BLUETOOTH</div><button class="modal-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="modal-info" id="modInfo"></div>
+      <button class="conn-btn" id="connBtn" onclick="doConnect()"><span id="connBtnTxt">⚡ PILIH PERANGKAT</span></button>
+      <button class="demo-btn" onclick="startDemo()">🧪 MODE DEMO</button>
+      <button class="disc-btn" id="discBtn" style="display:none" onclick="doDisconnect()">✕ PUTUSKAN</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================
+// KONSTANTA
+// ============================================
+const REF_WH_KM = 28;
+const CO2_BENSIN = 59.8;      // g/km
+const GRID_FACTOR = 0.67;     // g CO2 per Wh
+
+const AT_CMDS = ['AT+SOC?','AT+SOH?','AT+VBAT?','AT+IBAT?','AT+TBAT?','AT+CBAT?','AT+SPD?','AT+TINV?','AT+ODO?'];
+
+// ============================================
+// STATE
+// ============================================
+let connected=false, demoMode=false;
+let pollMs=200, battCap=20;
+let pollTimer=null;
+let cmdIdx=0, socStart=null, odoStart=null;
+let port=null, writer=null, reader=null, buf='';
+let customQuotes = [];
+let displayMode = 'trip';
+let currentQuoteIdx = 0;
+
+// ENERGY CALCULATION - PAKAI TIMESTAMP DARI DATA MASUK
+let totalEnergyUsed = 0;      // Wh
+let lastDataTimestamp = 0;    // ms terakhir data IBAT/VBAT masuk
+let lastIbat = 0;
+let lastVbat = 0;
+
+const data={soc:null,soh:null,ibat:null,cbat:null,vbat:null,tbat:null,spd:null,tinv:null,odo:null};
+
+// ============================================
+// FUNGSI PERHITUNGAN
+// ============================================
+function calcPower(){ 
+  if(data.vbat !== null && data.ibat !== null){
+    return data.vbat * data.ibat;
+  }
+  return 0;
+}
+
+// HITUNG ENERGI DENGAN DELTA TIME DARI DATA SEBELUMNYA
+function updateEnergyWithDelta(deltaMs){
+  if(deltaMs <= 0 || deltaMs > 10000) return totalEnergyUsed; // skip jika terlalu besar
+  
+  const ibat = data.ibat || 0;
+  const vbat = data.vbat || 0;
+  const power = vbat * ibat;
+  
+  // ENERGI HANYA DIHITUNG SAAT IBAT < 0 (DISCHARGE)
+  // dan POWER < 0 (karena arus negatif)
+  if(ibat < 0 && power < 0){
+    const deltaHours = deltaMs / 3600000;
+    const energyIncrement = Math.abs(power) * deltaHours;
+    totalEnergyUsed += energyIncrement;
+    
+    // Debug log di console (bisa dilihat di F12)
+    console.log(`⚡ Energy: +${energyIncrement.toFixed(4)} Wh (P=${Math.abs(power).toFixed(0)}W, dt=${(deltaMs/1000).toFixed(1)}s) → Total: ${totalEnergyUsed.toFixed(2)} Wh`);
+  }
+  
+  return totalEnergyUsed;
+}
+
+function calcEnergiTerpakai(){ return totalEnergyUsed; }
+
+function calcSisaEnergi(){ 
+  if(data.soc !== null && data.vbat !== null){
+    return (data.soc / 100) * battCap * data.vbat;
+  }
+  return null; 
+}
+
+function calcTrip(){
+  if(odoStart !== null && data.odo !== null){
+    return Math.max(0, data.odo - odoStart);
+  }
+  return null;
+}
+
+function calcEfisiensi(){
+  const wh = totalEnergyUsed;
+  const trip = calcTrip();
+  if(wh === 0 || trip === null || trip < 0.1) return null;
+  return wh / trip;
+}
+
+function calcSisaJarak(){
+  const sisaEnergi = calcSisaEnergi();
+  const efisiensi = calcEfisiensi();
+  if(sisaEnergi === null) return null;
+  if(efisiensi !== null && efisiensi > 0) return sisaEnergi / efisiensi;
+  return sisaEnergi / REF_WH_KM;
+}
+
+function calcCO2(){
+  const trip = calcTrip();
+  const efisiensi = calcEfisiensi();
+  
+  if(trip === null || trip < 0.1) return null;
+  if(efisiensi === null || efisiensi <= 0) return null;
+  
+  const co2_ev_per_km = efisiensi * GRID_FACTOR;
+  const co2_saved_per_km = CO2_BENSIN - co2_ev_per_km;
+  
+  if(co2_saved_per_km < 0) return 0;
+  return trip * co2_saved_per_km;
+}
+
+// ============================================
+// UI UPDATE
+// ============================================
+function updateAllUI(){
+  const energiTerpakai = totalEnergyUsed;
+  const sisaEnergi = calcSisaEnergi();
+  const sisaJarak = calcSisaJarak();
+  const trip = calcTrip();
+  const ef = calcEfisiensi();
+  const power = calcPower();
+  const co2 = calcCO2();
+  
+  const soc=data.soc;
+  const off=soc!==null?170-(Math.min(Math.max(soc,0),100)/100*170):170;
+  document.getElementById('arcFill') && (document.getElementById('arcFill').style.strokeDashoffset=off);
+  document.getElementById('socNum') && (document.getElementById('socNum').textContent=soc!==null?soc.toFixed(1):'--');
+  
+  const spd=data.spd||0;
+  document.getElementById('speedRing') && document.getElementById('speedRing').style.setProperty('--spd-pct',(Math.min(spd,120)/120*100).toFixed(1)+'%');
+  document.getElementById('spdNum') && (document.getElementById('spdNum').textContent=data.spd!==null?data.spd.toFixed(0):'--');
+  
+  const soh=data.soh||0;
+  document.getElementById('sohRing') && document.getElementById('sohRing').style.setProperty('--soh-pct',(Math.min(soh,100)/100*100).toFixed(1)+'%');
+  document.getElementById('sohNum') && (document.getElementById('sohNum').textContent=data.soh!==null?data.soh.toFixed(0):'--');
+  
+  document.getElementById('vbatNum') && (document.getElementById('vbatNum').textContent=data.vbat!==null?data.vbat.toFixed(1):'--');
+  document.getElementById('powerNum') && (document.getElementById('powerNum').textContent=power!==null?power.toFixed(0):'--');
+  
+  document.getElementById('ibatVal') && (document.getElementById('ibatVal').textContent=data.ibat!==null?data.ibat.toFixed(1):'--');
+  document.getElementById('energiVal') && (document.getElementById('energiVal').textContent=energiTerpakai!==null?energiTerpakai.toFixed(1):'--');
+  document.getElementById('tbatVal') && (document.getElementById('tbatVal').textContent=data.tbat!==null?data.tbat.toFixed(1):'--');
+  document.getElementById('cbatVal') && (document.getElementById('cbatVal').textContent=data.cbat!==null?data.cbat.toFixed(0):'--');
+  document.getElementById('tinvVal') && (document.getElementById('tinvVal').textContent=data.tinv!==null?data.tinv.toFixed(1):'--');
+  document.getElementById('sisaEnergiVal') && (document.getElementById('sisaEnergiVal').textContent=sisaEnergi!==null?sisaEnergi.toFixed(0):'--');
+  document.getElementById('sisaEnergiVal2') && (document.getElementById('sisaEnergiVal2').textContent=sisaEnergi!==null?sisaEnergi.toFixed(0):'--');
+  document.getElementById('sisaJarakVal') && (document.getElementById('sisaJarakVal').textContent=sisaJarak!==null?sisaJarak.toFixed(1):'--');
+  document.getElementById('tripVal') && (document.getElementById('tripVal').textContent=trip!==null?trip.toFixed(1):'--');
+  document.getElementById('efisVal') && (document.getElementById('efisVal').textContent=ef!==null?ef.toFixed(1):'--');
+  
+  const n=new Date();
+  document.getElementById('stTime') && (document.getElementById('stTime').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0'));
+  
+  if(displayMode !== 'quotes') updatePreviewGrid(displayMode);
+}
+
+// ============================================
+// DRAW MODES
+// ============================================
+const DEFAULT_QUOTES = [
+  '⚡ Nikmati setiap perjalanan','🔋 Berkendara aman sampai tujuan','🚗 Jaga jarak aman di jalan',
+  '🛑 Patuhi rambu lalu lintas','✅ Selamat berkendara','🌟 Perjalanan aman adalah terbaik'
+];
+
+function getAllQuotes(){
+  return [...customQuotes.map(q=>({text:q, source:'KUSTOM'})), ...DEFAULT_QUOTES.map(q=>({text:q, source:'GRID'}))];
+}
+
+function drawTripMode(){
+  const canvas = document.getElementById('displayCanvas');
+  if(!canvas) return;
+  canvas.width = 300;
+  canvas.height = 150;
+  const ctx = canvas.getContext('2d');
+  const W=300, H=150;
+  
+  ctx.fillStyle = '#030508';
+  ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = '#00ffaa';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(2,2,W-4,H-4);
+  
+  ctx.font='bold 10px Arial,sans-serif';
+  ctx.fillStyle='#00ffaa';
+  ctx.textAlign='center';
+  ctx.fillText('PERJALANAN & ENERGI', W/2, 12);
+  ctx.textAlign='left';
+  
+  const items = [
+    { label:'POWER', val:calcPower(), unit:'W', color:'#00ffaa', col:0, row:0 },
+    { label:'TRIP', val:calcTrip(), unit:'km', color:'#00cfff', col:1, row:0 },
+    { label:'EFISIENSI', val:calcEfisiensi(), unit:'Wh/km', color:'#ffcc00', col:0, row:1 },
+    { label:'SISA JARAK', val:calcSisaJarak(), unit:'km', color:'#00ffaa', col:1, row:1 },
+    { label:'CO₂', val:calcCO2(), unit:'g', color:'#00cfff', col:0, row:2 },
+    { label:'ENERGI', val:totalEnergyUsed, unit:'Wh', color:'#ff6b35', col:1, row:2 }
+  ];
+  
+  const colWidth = W/2;
+  const startY = 28;
+  const rowHeight = 38;
+  
+  items.forEach(item=>{
+    const x = (item.col * colWidth) + 8;
+    const y = startY + (item.row * rowHeight);
+    
+    ctx.font='bold 9px Arial,sans-serif';
+    ctx.fillStyle = '#88aacc';
+    ctx.fillText(item.label, x, y);
+    
+    let valDisplay = (item.val!==null && item.val!==undefined) ? Math.abs(item.val).toFixed(1) : '--';
+    ctx.font='bold 22px "Share Tech Mono",monospace';
+    ctx.fillStyle = item.color;
+    ctx.fillText(valDisplay, x, y+24);
+    
+    ctx.font='bold 8px Arial,sans-serif';
+    ctx.fillStyle = '#4a6a8a';
+    ctx.fillText(item.unit, x + ctx.measureText(valDisplay).width + 5, y+21);
+  });
+  
+  updatePreviewGrid('trip');
+}
+
+function drawBatteryMode(){
+  const canvas = document.getElementById('displayCanvas');
+  if(!canvas) return;
+  canvas.width = 300;
+  canvas.height = 150;
+  const ctx = canvas.getContext('2d');
+  const W=300, H=150;
+  
+  ctx.fillStyle = '#030508';
+  ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = '#00ffaa';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(2,2,W-4,H-4);
+  
+  ctx.font='bold 10px Arial,sans-serif';
+  ctx.fillStyle='#00ffaa';
+  ctx.textAlign='center';
+  ctx.fillText('BATERAI & SISTEM', W/2, 12);
+  ctx.textAlign='left';
+  
+  const items = [
+    { label:'VOLTASE', val:data.vbat, unit:'V', color:'#00cfff', col:0, row:0 },
+    { label:'ARUS', val:data.ibat, unit:'A', color:'#00cfff', col:1, row:0 },
+    { label:'SOH', val:data.soh, unit:'%', color:'#ffcc00', col:0, row:1 },
+    { label:'TEMP BATERAI', val:data.tbat, unit:'°C', color:'#ff6b35', col:1, row:1 },
+    { label:'TEMP INVERTER', val:data.tinv, unit:'°C', color:'#ff6b35', col:0, row:2 },
+    { label:'SISA ENERGI', val:calcSisaEnergi(), unit:'Wh', color:'#00ffaa', col:1, row:2 }
+  ];
+  
+  const colWidth = W/2;
+  const startY = 28;
+  const rowHeight = 38;
+  
+  items.forEach(item=>{
+    const x = (item.col * colWidth) + 8;
+    const y = startY + (item.row * rowHeight);
+    
+    ctx.font='bold 9px Arial,sans-serif';
+    ctx.fillStyle = '#88aacc';
+    ctx.fillText(item.label, x, y);
+    
+    let valDisplay = (item.val!==null) ? item.val.toFixed(1) : '--';
+    ctx.font='bold 22px "Share Tech Mono",monospace';
+    ctx.fillStyle = item.color;
+    ctx.fillText(valDisplay, x, y+24);
+    
+    ctx.font='bold 8px Arial,sans-serif';
+    ctx.fillStyle = '#4a6a8a';
+    ctx.fillText(item.unit, x + ctx.measureText(valDisplay).width + 5, y+21);
+  });
+  
+  updatePreviewGrid('battery');
+}
+
+function drawQuotesMode(){
+  const canvas = document.getElementById('displayCanvas');
+  if(!canvas) return;
+  canvas.width = 300;
+  canvas.height = 150;
+  const ctx = canvas.getContext('2d');
+  const W=300, H=150;
+  const quotes = getAllQuotes();
+  if(quotes.length === 0) return;
+  if(currentQuoteIdx >= quotes.length) currentQuoteIdx = 0;
+  const item = quotes[currentQuoteIdx];
+  
+  ctx.fillStyle = '#030508';
+  ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = '#00ffaa';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(2,2,W-4,H-4);
+  
+  ctx.font='bold 8px Arial,sans-serif';
+  ctx.fillStyle='#00ffaa';
+  ctx.textAlign='left';
+  ctx.fillText('✧ '+item.source+' ✧', 8, 12);
+  
+  const text = item.text;
+  ctx.font='bold 16px Arial,sans-serif';
+  ctx.fillStyle='#ffffff';
+  ctx.shadowColor='rgba(0,255,170,0.4)';
+  ctx.shadowBlur=4;
+  ctx.textAlign='center';
+  
+  const words = text.split(' ');
+  let lines=[], line='';
+  const maxW=W-30;
+  words.forEach(w=>{
+    const test=line?line+' '+w:w;
+    if(ctx.measureText(test).width>maxW && line){ lines.push(line); line=w; }
+    else line=test;
+  });
+  if(line) lines.push(line);
+  
+  const lineHeight = 22;
+  const totalHeight = lines.length * lineHeight;
+  let y = (H - totalHeight) / 2 + 10;
+  
+  lines.forEach(l=>{
+    ctx.fillText(l, W/2, y);
+    y += lineHeight;
+  });
+  
+  ctx.shadowBlur=0;
+  ctx.textAlign='left';
+  
+  ctx.font='bold 35px Georgia,serif';
+  ctx.fillStyle='rgba(0,255,170,0.1)';
+  ctx.fillText('"', 6, 40);
+  ctx.fillText('"', W-28, H-18);
+  
+  const container = document.getElementById('quotesPills');
+  if(container){
+    container.innerHTML = '';
+    quotes.forEach((q,i)=>{
+      const pill = document.createElement('div');
+      pill.className = 'nav-pill' + (i===currentQuoteIdx ? ' active' : '');
+      pill.textContent = q.text.length>15?q.text.substring(0,12)+'...':q.text;
+      pill.onclick = ()=>{ currentQuoteIdx=i; sendCurrentDisplay(); };
+      container.appendChild(pill);
+    });
+  }
+  
+  updatePreviewGrid('quotes');
+}
+
+function updatePreviewGrid(mode){
+  const container = document.getElementById('previewGrid');
+  if(!container) return;
+  
+  if(mode === 'trip'){
+    const items = [
+      { label:'POWER', val:calcPower(), unit:'W' },
+      { label:'TRIP', val:calcTrip(), unit:'km' },
+      { label:'EFISIENSI', val:calcEfisiensi(), unit:'Wh/km' },
+      { label:'SISA JARAK', val:calcSisaJarak(), unit:'km' },
+      { label:'CO₂', val:calcCO2(), unit:'g' },
+      { label:'ENERGI', val:totalEnergyUsed, unit:'Wh' }
+    ];
+    container.innerHTML = items.map(item => `
+      <div class="preview-card">
+        <div class="preview-label">${item.label}</div>
+        <div class="preview-value">${item.val!==null && item.val!==undefined ? Math.abs(item.val).toFixed(1) : '--'}<span class="preview-unit">${item.unit}</span></div>
+      </div>
+    `).join('');
+    document.getElementById('displayInfo') && (document.getElementById('displayInfo').textContent='PERJALANAN & ENERGI');
+  } 
+  else if(mode === 'battery'){
+    const items = [
+      { label:'VOLTASE', val:data.vbat, unit:'V' },
+      { label:'ARUS', val:data.ibat, unit:'A' },
+      { label:'SOH', val:data.soh, unit:'%' },
+      { label:'TEMP BATERAI', val:data.tbat, unit:'°C' },
+      { label:'TEMP INVERTER', val:data.tinv, unit:'°C' },
+      { label:'SISA ENERGI', val:calcSisaEnergi(), unit:'Wh' }
+    ];
+    container.innerHTML = items.map(item => `
+      <div class="preview-card">
+        <div class="preview-label">${item.label}</div>
+        <div class="preview-value">${item.val!==null?item.val.toFixed(1):'--'}<span class="preview-unit">${item.unit}</span></div>
+      </div>
+    `).join('');
+    document.getElementById('displayInfo') && (document.getElementById('displayInfo').textContent='BATERAI & SISTEM');
+  }
+  else if(mode === 'quotes'){
+    const quotes = getAllQuotes();
+    const currentQuote = quotes[currentQuoteIdx] || {text:'-', source:'-'};
+    container.innerHTML = `
+      <div class="preview-card" style="grid-column:1/-1">
+        <div class="preview-label">${currentQuote.source}</div>
+        <div class="preview-value" style="font-size:12px;">${currentQuote.text.substring(0,40)}${currentQuote.text.length>40?'...':''}</div>
+      </div>
+    `;
+    document.getElementById('displayInfo') && (document.getElementById('displayInfo').textContent='QUOTES');
+  }
+}
+
+function sendCurrentDisplay(){
+  if(displayMode === 'trip'){
+    drawTripMode();
+  } else if(displayMode === 'battery'){
+    drawBatteryMode();
+  } else {
+    drawQuotesMode();
+  }
+  
+  const canvas = document.getElementById('displayCanvas');
+  if(!canvas) return;
+  let b64='';
+  for(let q=0.4; q>=0.25; q-=0.05){
+    const t=canvas.toDataURL('image/jpeg',q).split(',')[1];
+    if(t && t.length<=6800){ b64=t; break; }
+  }
+  document.getElementById('displaySize') && (document.getElementById('displaySize').textContent=b64?b64.length+'/6900 chr':'Error');
+  if(!connected || !b64) return;
+  sendCmd('AT+MAPS="'+b64+'"');
+}
+
+// ============================================
+// TIMERS
+// ============================================
+let dataUpdateTimer = null;
+let quotesRotateTimer = null;
+
+function startTimers(){
+  if(dataUpdateTimer) clearInterval(dataUpdateTimer);
+  if(quotesRotateTimer) clearInterval(quotesRotateTimer);
+  
+  // Update UI setiap detik
+  setInterval(()=>{
+    updateAllUI();
+  }, 1000);
+  
+  dataUpdateTimer = setInterval(()=>{
+    if(displayMode !== 'quotes') sendCurrentDisplay();
+  }, 1000);
+  
+  quotesRotateTimer = setInterval(()=>{
+    if(displayMode === 'quotes'){
+      const quotes = getAllQuotes();
+      if(quotes.length > 0){
+        currentQuoteIdx = (currentQuoteIdx + 1) % quotes.length;
+        sendCurrentDisplay();
+      }
+    }
+  }, 10000);
+}
+
+function setDisplayMode(mode){
+  displayMode = mode;
+  document.querySelectorAll('.mode-opt').forEach(opt=>{
+    if(opt.dataset.mode === mode) opt.classList.add('active');
+    else opt.classList.remove('active');
+  });
+  
+  const quotesPanel = document.getElementById('quotesPanel');
+  if(mode === 'quotes'){
+    quotesPanel.style.display = 'block';
+  } else {
+    quotesPanel.style.display = 'none';
+  }
+  sendCurrentDisplay();
+}
+
+function addCustomQuote(){
+  const inp = document.getElementById('quoteInput');
+  const val = inp.value.trim();
+  if(!val){ showToast('Tulis quote dulu','err'); return; }
+  customQuotes.push(val);
+  inp.value = '';
+  if(displayMode === 'quotes') sendCurrentDisplay();
+  showToast('Quote ditambahkan!','ok');
+}
+
+// ============================================
+// POLLING & SERIAL (KONEKSI NYATA)
+// ============================================
+function startPoll(){ stopPoll(); cmdIdx=0; pollTimer=setInterval(()=>{ if(connected) sendCmd(AT_CMDS[cmdIdx]); cmdIdx=(cmdIdx+1)%AT_CMDS.length; },pollMs); }
+function stopPoll(){ if(pollTimer){clearInterval(pollTimer);pollTimer=null;} }
+
+async function sendCmd(cmd){
+  if(demoMode){ simResp(cmd); return; }
+  if(!writer) return;
+  try{
+    await writer.write(new TextEncoder().encode(cmd+'\r\n'));
+    if(!cmd.startsWith('AT+TIME')) logMon(cmd,'tx');
+  } catch(e){ logMon('ERR: '+e.message,'err'); }
+}
+
+function parseResp(raw){
+  raw=raw.trim();
+  if(!raw||raw==='OK'||raw==='ERROR') return;
+  const eq=raw.indexOf('=');
+  if(eq===-1) return;
+  let key=raw.substring(0,eq).toUpperCase().trim().replace(/^AT\+/,'');
+  const val=parseFloat(raw.substring(eq+1));
+  if(isNaN(val)) return;
+  
+  const map={SOC:'soc',SOH:'soh',IBAT:'ibat',CBAT:'cbat',VBAT:'vbat',TBAT:'tbat',SPD:'spd',TINV:'tinv',ODO:'odo'};
+  
+  if(map[key]!==undefined){
+    // HITUNG ENERGI SEBELUM UPDATE DATA (pakai data lama)
+    const now = Date.now();
+    let deltaTime = 1000; // default 1 detik
+    
+    if(lastDataTimestamp > 0 && (key === 'IBAT' || key === 'VBAT')){
+      deltaTime = Math.min(now - lastDataTimestamp, 5000);
+      if(deltaTime > 0 && deltaTime < 5000){
+        updateEnergyWithDelta(deltaTime);
+      }
+    }
+    
+    // Update timestamp setelah hitung energi
+    if(key === 'IBAT' || key === 'VBAT'){
+      lastDataTimestamp = now;
+    }
+    
+    // Set data
+    if(key==='SOC' && socStart===null) socStart=val;
+    if(key==='ODO' && odoStart===null) odoStart=val;
+    data[map[key]]=val;
+    
+    updateAllUI();
+    if(displayMode !== 'quotes') sendCurrentDisplay();
+  }
+}
+
+// ============================================
+// DEMO MODE (untuk testing tanpa BT)
+// ============================================
+let demoOdo=120;
+let demoLastTime=0;
+
+function simResp(cmd){
+  if(cmd.startsWith('AT+NAV=')||cmd.startsWith('AT+TIME=')||cmd.startsWith('AT+MAPS=')) return;
+  
+  const now = Date.now();
+  let deltaMs = 1000;
+  if(demoLastTime > 0){
+    deltaMs = Math.min(now - demoLastTime, 2000);
+  }
+  demoLastTime = now;
+  
+  // Simulasi IBAT NEGATIF (discharge)
+  const demoIbat = -(10 + Math.random() * 15);
+  const demoVbat = 69 + Math.random() * 2;
+  
+  // Hitung energi untuk demo
+  if(demoIbat < 0){
+    const power = Math.abs(demoIbat * demoVbat);
+    const energyInc = power * (deltaMs / 3600000);
+    totalEnergyUsed += energyInc;
+  }
+  
+  const r={
+    'AT+SOC?':()=>'AT+SOC='+(68 - (totalEnergyUsed / (battCap * 70) * 30) + Math.sin(now/20000)*5).toFixed(1),
+    'AT+SOH?':()=>'AT+SOH=0097',
+    'AT+VBAT?':()=>'AT+VBAT='+demoVbat.toFixed(1),
+    'AT+IBAT?':()=>'AT+IBAT='+demoIbat.toFixed(1),
+    'AT+TBAT?':()=>'AT+TBAT='+(32+Math.random()*3).toFixed(1),
+    'AT+CBAT?':()=>'AT+CBAT=00052',
+    'AT+SPD?':()=>'AT+SPD='+(Math.floor(35+Math.random()*45)).toString().padStart(3,'0'),
+    'AT+TINV?':()=>'AT+TINV='+(38+Math.random()*4).toFixed(1),
+    'AT+ODO?':()=>{ 
+      const speed = 40 + Math.random() * 30;
+      demoOdo += speed * (deltaMs / 3600000);
+      return 'AT+ODO='+demoOdo.toFixed(1); 
+    },
+  };
+  if(r[cmd]) setTimeout(()=>parseResp(r[cmd]()),30+Math.random()*60);
+}
+
+// ============================================
+// SERIAL CONNECTION
+// ============================================
+async function readLoop(){
+  const dec=new TextDecoder();
+  try{
+    while(port&&port.readable){
+      reader=port.readable.getReader();
+      try{
+        while(true){
+          const{value,done}=await reader.read();
+          if(done) break;
+          buf+=dec.decode(value);
+          let lines=buf.split('\n');
+          buf=lines.pop();
+          lines.forEach(l=>{ const t=l.trim(); if(t){logMon(t,'rx');parseResp(t);} });
+        }
+      } finally{ reader.releaseLock(); }
+    }
+  } catch(e){ console.warn(e); }
+}
+
+async function doConnect(){
+  if(!navigator.serial){ showToast('Gunakan Chrome/Edge','err'); return; }
+  document.getElementById('connBtnTxt').innerHTML='<span class="spin">⟳</span> MENGHUBUNGKAN...';
+  document.getElementById('connBtn').disabled=true;
+  try{
+    port=await navigator.serial.requestPort();
+    const baud=parseInt(document.getElementById('baudSel').value)||9600;
+    await port.open({baudRate:baud});
+    writer=port.writable.getWriter();
+    readLoop();
+    onConnected('BT Serial');
+  } catch(e){
+    document.getElementById('connBtnTxt').innerHTML='⚡ PILIH PERANGKAT';
+    document.getElementById('connBtn').disabled=false;
+    showToast('Gagal: '+e.message,'err');
+  }
+}
+
+function startDemo(){ 
+  demoMode=true; 
+  demoOdo=120;
+  demoLastTime=0;
+  totalEnergyUsed = 0;
+  lastDataTimestamp = 0;
+  socStart = 68;
+  odoStart = 120;
+  onConnected('DEMO MODE'); 
+}
+
+function onConnected(name){
+  connected=true;
+  
+  document.getElementById('btBtn').classList.add('connected');
+  document.getElementById('btLbl').textContent=name.substring(0,10);
+  document.getElementById('stDot').className='st-dot ok';
+  document.getElementById('stTxt').textContent='Terhubung: '+name;
+  document.getElementById('discBtn').style.display='block';
+  document.getElementById('connBtnTxt').innerHTML='⚡ PILIH PERANGKAT';
+  document.getElementById('connBtn').disabled=false;
+  closeModal();
+  showToast('✓ '+name,'ok');
+  sendTimeOnce();
+}
+
+async function doDisconnect(){
+  connected=false; demoMode=false;
+  stopPoll();
+  if(dataUpdateTimer) clearInterval(dataUpdateTimer);
+  if(quotesRotateTimer) clearInterval(quotesRotateTimer);
+  try{
+    if(writer){writer.releaseLock();writer=null;}
+    if(reader){reader.cancel();reader=null;}
+    if(port){await port.close();port=null;}
+  } catch(e){}
+  document.getElementById('btBtn').classList.remove('connected');
+  document.getElementById('btLbl').textContent='Serial';
+  document.getElementById('stDot').className='st-dot err';
+  document.getElementById('stTxt').textContent='Tidak terhubung';
+  document.getElementById('discBtn').style.display='none';
+  Object.keys(data).forEach(k=>data[k]=null);
+  socStart=null; odoStart=null; buf='';
+  totalEnergyUsed = 0;
+  lastDataTimestamp = 0;
+  updateAllUI();
+  showToast('Koneksi diputus','err');
+  closeModal();
+}
+
+function sendTimeOnce(){
+  const n=new Date();
+  const hhmm=String(n.getHours()).padStart(2,'0')+String(n.getMinutes()).padStart(2,'0');
+  sendCmd('AT+TIME="'+hhmm+'"');
+  setTimeout(()=>{ startPoll(); startTimers(); }, 800);
+}
+
+// ============================================
+// MONITOR & SETTINGS
+// ============================================
+const MAX_LINES=60;
+function logMon(txt,type){
+  const el=document.getElementById('monScreen');
+  if(!el) return;
+  const colors={tx:'#00cfff',rx:'#00ffaa',err:'#ff2d55'};
+  const pfx={tx:'→ ',rx:'← ',err:'✕ '};
+  const d=document.createElement('div');
+  d.style.color=colors[type]||'#6a9cc0';
+  d.textContent=(pfx[type]||'')+txt;
+  el.appendChild(d);
+  while(el.children.length>MAX_LINES) el.removeChild(el.firstChild);
+  el.scrollTop=el.scrollHeight;
+}
+function clearMon(){ const el=document.getElementById('monScreen'); if(el) el.innerHTML=''; }
+function sendManual(){
+  const inp=document.getElementById('manInp');
+  const cmd=inp.value.trim();
+  if(!cmd){showToast('Masukkan command','err');return;}
+  if(!connected){showToast('Belum terhubung','err');return;}
+  sendCmd(cmd); logMon(cmd,'tx'); inp.value='';
+}
+
+function setCap(){ const v=parseFloat(document.getElementById('capInp').value); if(!v||v<=0){showToast('Tidak valid','err');return;} battCap=v; updateAllUI(); showToast('Cap: '+v+' Ah','ok'); }
+function setPoll(){ const v=parseInt(document.getElementById('pollInp').value); if(!v||v<100){showToast('Min 100ms','err');return;} pollMs=v; if(connected){stopPoll();startPoll();} showToast('Poll: '+v+'ms','ok'); }
+
+function tickClock(){ const n=new Date(); document.getElementById('clock').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'); }
+setInterval(tickClock,1000); tickClock();
+
+let toastT=null;
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
+  if(toastT) clearTimeout(toastT);
+  toastT=setTimeout(()=>t.className='toast',3000);
+}
+
+function openModal(){
+  const info=document.getElementById('modInfo');
+  if(navigator.serial){
+    info.className='modal-info';
+    info.innerHTML='<strong>✓ Web Serial tersedia.</strong><br>Pastikan perangkat sudah dipair, lalu klik Pilih Perangkat.';
+    document.getElementById('connBtn').disabled=false;
+  } else {
+    info.className='modal-info warn';
+    info.innerHTML='<strong>⚠ Web Serial tidak tersedia.</strong><br>Gunakan Chrome/Edge via HTTPS.';
+    document.getElementById('connBtn').disabled=true;
+  }
+  document.getElementById('overlay').classList.add('show');
+}
+function closeModal(){ document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+
+document.querySelectorAll('.mode-opt').forEach(opt=>{
+  opt.addEventListener('click',()=>{ setDisplayMode(opt.dataset.mode); });
+});
+
+window.addEventListener('load',()=>{
+  updateAllUI();
+  drawTripMode();
+  setDisplayMode('trip');
+});
+</script>
+</body>
+</html>

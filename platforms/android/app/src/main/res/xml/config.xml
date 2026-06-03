@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.gridev.monitor" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Grid EV Monitor</name>
+    <description>BMS EV Monitor via Bluetooth</description>
+    <content src="index.html" />
+    <access origin="*" />
+    <allow-intent href="market:*" />
+    <icon src="res/icon/android/icon.png" />
+    <preference name="loglevel" value="DEBUG" />
+    <preference name="Orientation" value="portrait" />
+    <preference name="Fullscreen" value="false" />
+    <preference name="AndroidInsecureFileModeEnabled" value="true" />
+    <preference name="android-minSdkVersion" value="24" />
+    <preference name="android-targetSdkVersion" value="34" />
+</widget>

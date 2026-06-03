@@ -1,0 +1,14 @@
+{
+  "name": "gridev-monitor",
+  "version": "1.0.0",
+  "description": "Grid EV Monitor",
+  "main": "index.html",
+  "cordova": {
+    "platforms": [
+      "android"
+    ]
+  },
+  "devDependencies": {
+    "cordova-android": "^12.0.1"
+  }
+}
