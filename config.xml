@@ -1,12 +1,20 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.gridev.monitor" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="com.gridev.monitor" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>Grid EV Monitor</name>
-    <description>BMS EV Monitor via Bluetooth</description>
+    <description>BMS / EV Monitor via Bluetooth Classic SPP</description>
+    <author email="dev@workingenergy.local" href="https://workingenergy.local">Working Energy</author>
     <content src="index.html" />
     <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
     
     <preference name="Orientation" value="portrait" />
     <preference name="Fullscreen" value="false" />
+    <preference name="BackgroundColor" value="0xff0a0a0a" />
     <preference name="AndroidInsecureFileModeEnabled" value="true" />
     
     <platform name="android">
@@ -14,6 +22,19 @@
         <preference name="android-targetSdkVersion" value="34" />
         <allow-intent href="market:*" />
         
-        <icon src="res/icon/android/icon.png" />
+        <icon density="hdpi" src="res/icon/android/icon.png" />
+        <icon density="mdpi" src="res/icon/android/icon.png" />
+        <icon density="xhdpi" src="res/icon/android/icon.png" />
+        <icon density="xxhdpi" src="res/icon/android/icon.png" />
+        <icon density="xxxhdpi" src="res/icon/android/icon.png" />
+        
+        <config-file target="AndroidManifest.xml" parent="/manifest">
+            <uses-permission android:name="android.permission.BLUETOOTH" />
+            <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+            <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+            <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+        </config-file>
     </platform>
 </widget>

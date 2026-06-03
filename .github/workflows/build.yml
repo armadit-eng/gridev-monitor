@@ -30,6 +30,10 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
+    - name: Install Bluetooth Plugin
+      run: |
+        cordova plugin add cordova-plugin-bluetooth-serial
+        
     - name: Add Android Platform
       run: cordova platform add android@13
       

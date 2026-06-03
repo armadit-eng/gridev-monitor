@@ -1,14 +1,12 @@
 {
   "name": "gridev-monitor",
   "version": "1.0.0",
-  "description": "Grid EV Monitor",
+  "description": "Grid EV Monitor BMS via Bluetooth",
   "main": "index.html",
   "cordova": {
-    "platforms": [
-      "android"
-    ]
-  },
-  "devDependencies": {
-    "cordova-android": "^12.0.1"
+    "platforms": ["android"],
+    "plugins": {
+      "cordova-plugin-bluetooth-serial": {}
+    }
   }
 }
